@@ -8,6 +8,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
     "dayjs": "^1.11.21",
+    "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "firebase": "^12.16.0",
     "framer-motion": "^12.42.2",
