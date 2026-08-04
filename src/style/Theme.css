@@ -1,0 +1,61 @@
+:root {
+  /* Base */
+
+  --background: #f8fafc;
+  --card: #ffffff;
+  --sidebar: #ffffff;
+
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+
+  /* Accent */
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #dbeafe;
+}
+
+/* =============================== */
+
+.dark {
+  --background: #09090b;
+  --card: #18181b;
+  --sidebar: #111111;
+
+  --text: #f8fafc;
+  --text-secondary: #a1a1aa;
+  --border: #27272a;
+}
+
+/* =============================== */
+
+.theme-ocean {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #dbeafe;
+}
+
+.theme-emerald {
+  --primary: #059669;
+  --primary-hover: #047857;
+  --primary-soft: #d1fae5;
+}
+
+.theme-indigo {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-soft: #e0e7ff;
+}
+
+.theme-slate {
+  --primary: #475569;
+  --primary-hover: #334155;
+  --primary-soft: #e2e8f0;
+}
+
+.theme-teal {
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-soft: #ccfbf1;
+}

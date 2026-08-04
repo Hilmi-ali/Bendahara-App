@@ -1,13 +1,81 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "./style/Theme.css";
+
+html {
+  scroll-behavior: smooth;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+body {
+  margin: 0;
+
+  :root {
+    --font-primary: "Plus Jakarta Sans", sans-serif;
+  }
+
+  html {
+    font-family: var(--font-primary);
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-primary);
+    background: #f8fafc;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  background: #f8fafc;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+button {
+  font-family: inherit;
+  font-weight: 600;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* =========================================
+   MODERN SCROLLBAR
+========================================= */
+
+.modern-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #8b8b8b transparent;
+  scroll-behavior: smooth;
+}
+
+.modern-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modern-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scroll::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.35);
+  border-radius: 20px;
+}
+
+.modern-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.6);
 }
