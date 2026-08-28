@@ -9,6 +9,7 @@ import PaymentModal from "../components/payments/PaymentModal";
 import TransactionHistoryModal from "../components/payments/TransactionHistoryModal";
 
 import usePayments from "../hooks/usePayments";
+import { cancelTransaction } from "../services/paymentService";
 
 export default function Payments() {
   const { students, transactions, loading, refresh } = usePayments();
@@ -47,6 +48,26 @@ export default function Payments() {
 
   function handleBayar(student) {
     setSelectedStudent(student);
+    setPaymentOpen(true);
+  }
+
+  async function handleUndo(trx) {
+    // kembalikan nominal ke tagihan semula
+    const result = await cancelTransaction(trx.id);
+
+    // refresh data siswa & riwayat supaya tabel & totalnya ikut update
+    await refresh();
+
+    // tutup modal riwayat, lalu langsung buka modal Bayar
+    // untuk siswa yg sama supaya admin bisa input nominal yang benar
+    setHistoryOpen(false);
+
+    const studentToReopen = students.find((s) => s.nis === result.nis) || {
+      nis: result.nis,
+      nama: result.nama,
+    };
+
+    setSelectedStudent(studentToReopen);
     setPaymentOpen(true);
   }
 
@@ -162,6 +183,7 @@ export default function Payments() {
         open={historyOpen}
         transactions={transactions}
         onClose={() => setHistoryOpen(false)}
+        onUndo={handleUndo}
       />
     </div>
   );

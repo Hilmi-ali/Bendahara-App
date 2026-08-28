@@ -37,11 +37,17 @@ export default function PaymentModal({ open, student, onClose }) {
       const data = await getStudentBills(student.nis);
 
       setBills(
-        data.map((b) => ({
-          ...b,
-          bayar: "",
-          potongan: "",
-        })),
+        data
+          .sort((a, b) =>
+            String(a.nama || "").localeCompare(String(b.nama || ""), "id", {
+              sensitivity: "base",
+            }),
+          )
+          .map((b) => ({
+            ...b,
+            bayar: "",
+            potongan: "",
+          })),
       );
     }
 
@@ -168,6 +174,12 @@ duration-300
                   <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
                     {bill.nama}
                   </h3>
+                  <span
+                    className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 truncate max-w-[220px]"
+                    title={bill.id}
+                  >
+                    ID: {bill.id}
+                  </span>
 
                   <div className="mt-1.5 flex flex-col gap-1 text-xs">
                     <span className="text-zinc-400 dark:text-zinc-500">
@@ -191,9 +203,9 @@ duration-300
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <div className="col-span-2 mt-2">
                   <div className="flex justify-between text-xs mb-1">
-                    <span>Sisa Pembayaran</span>
+                    <span style={{ color: "#fff" }}>Sisa Pembayaran</span>
 
-                    <span>
+                    <span style={{ color: "#fff" }}>
                       {Math.round(
                         ((bill.nominal - bill.sisa) / bill.nominal) * 100 || 0,
                       )}

@@ -15,12 +15,6 @@ const studentRef = collection(db, "students");
 
 const MAX_BATCH = 450;
 
-/*
-===================================================
-Get Bills
-===================================================
-*/
-
 export async function getBills() {
   const snap = await getDocs(billRef);
 
@@ -29,12 +23,6 @@ export async function getBills() {
     ...doc.data(),
   }));
 }
-
-/*
-===================================================
-Preview
-===================================================
-*/
 
 export async function previewBillPackage({ jurusan, angkatan, items }) {
   const q = query(
@@ -64,20 +52,8 @@ export async function previewBillPackage({ jurusan, angkatan, items }) {
   };
 }
 
-/*
-===================================================
-Create Package
-===================================================
-*/
-
 export async function createBillPackage(data, onProgress = () => {}) {
   const { jurusan, angkatan, items } = data;
-
-  /*
-  ======================================
-  CEK DUPLIKAT
-  ======================================
-  */
 
   const cek = query(
     billRef,
@@ -90,12 +66,6 @@ export async function createBillPackage(data, onProgress = () => {}) {
   if (!exist.empty) {
     throw new Error(`Paket ${jurusan} ${angkatan} sudah ada.`);
   }
-
-  /*
-  ======================================
-  AMBIL SISWA
-  ======================================
-  */
 
   const q = query(
     studentRef,
@@ -118,18 +88,9 @@ export async function createBillPackage(data, onProgress = () => {}) {
     throw new Error("Tidak ada siswa ditemukan.");
   }
 
-  /*
-  ======================================
-  SIMPAN MASTER TAGIHAN
-  ======================================
-  */
-
   const paketId = jurusan + "-" + angkatan + "-" + Date.now();
-
   let batch = writeBatch(db);
-
   let operation = 0;
-
   const commitBatch = async () => {
     if (operation === 0) return;
 
@@ -189,12 +150,6 @@ export async function createBillPackage(data, onProgress = () => {}) {
 
   await commitBatch();
   console.log("Master tagihan berhasil disimpan");
-
-  /*
-  ======================================
-  GENERATE TAGIHAN SISWA
-  ======================================
-  */
 
   const studentsSnap = await getDocs(
     query(

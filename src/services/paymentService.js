@@ -44,13 +44,6 @@ export async function getStudents(filters = {}) {
   }));
 }
 
-/*
-==================================
-AMBIL TAGIHAN SATU SISWA
-(read hanya saat tombol Bayar)
-==================================
-*/
-
 export async function getStudentBills(nis) {
   const snap = await getDocs(collection(db, "studentBills", nis, "bills"));
 
@@ -59,12 +52,6 @@ export async function getStudentBills(nis) {
     ...doc.data(),
   }));
 }
-
-/*
-==================================
-SIMPAN PEMBAYARAN
-==================================
-*/
 
 export async function savePayment({ nis, payments }) {
   const batch = writeBatch(db);
@@ -161,4 +148,103 @@ export async function getTransactions() {
     id: doc.id,
     ...doc.data(),
   }));
+}
+
+export async function cancelTransaction(trxId) {
+  const trxRef = doc(db, "transactions", trxId);
+  const trxSnap = await getDoc(trxRef);
+
+  if (!trxSnap.exists()) {
+    throw new Error("Transaksi tidak ditemukan.");
+  }
+
+  const trx = trxSnap.data();
+
+  if (trx.dibatalkan) {
+    throw new Error("Transaksi ini sudah pernah dibatalkan.");
+  }
+
+  const { nis, billId, bayar = 0, potongan = 0 } = trx;
+
+  const billRef = doc(db, "studentBills", nis, "bills", billId);
+  const billSnap = await getDoc(billRef);
+
+  if (!billSnap.exists()) {
+    throw new Error("Tagihan terkait tidak ditemukan (mungkin sudah dihapus).");
+  }
+
+  const bill = billSnap.data();
+
+  const parentRef = doc(db, "studentBills", nis);
+  const parentSnap = await getDoc(parentRef);
+
+  if (!parentSnap.exists()) {
+    throw new Error("Data siswa tidak ditemukan.");
+  }
+
+  const summary = parentSnap.data();
+
+  const wasLunas = bill.status === "Lunas";
+
+  // kembalikan nominal di level bill
+  const dibayarBaru = Math.max(
+    0,
+    Number(bill.dibayar || 0) - Number(bayar) - Number(potongan),
+  );
+  const potonganBaru = Math.max(
+    0,
+    Number(bill.potongan || 0) - Number(potongan),
+  );
+  const sisaBaru = Math.max(0, Number(bill.nominal || 0) - dibayarBaru);
+  const statusBaru = sisaBaru <= 0 ? "Lunas" : "Belum Bayar";
+
+  const nowNotLunas = wasLunas && statusBaru !== "Lunas";
+
+  // kembalikan nominal di level summary siswa
+  const totalDibayarBaru = Math.max(
+    0,
+    Number(summary.totalDibayar || 0) - Number(bayar),
+  );
+  const totalPotonganBaru = Math.max(
+    0,
+    Number(summary.totalPotongan || 0) - Number(potongan),
+  );
+  const totalSisaBaruRaw =
+    Number(summary.totalSisa || 0) + Number(bayar) + Number(potongan);
+  const totalSisaBaru = totalSisaBaruRaw < 0 ? 0 : totalSisaBaruRaw;
+  const jumlahBelumBaru =
+    Number(summary.jumlahBelumLunas || 0) + (nowNotLunas ? 1 : 0);
+
+  const batch = writeBatch(db);
+
+  batch.update(billRef, {
+    dibayar: dibayarBaru,
+    potongan: potonganBaru,
+    sisa: sisaBaru,
+    status: statusBaru,
+    updatedAt: serverTimestamp(),
+  });
+
+  batch.update(parentRef, {
+    totalDibayar: totalDibayarBaru,
+    totalPotongan: totalPotonganBaru,
+    totalSisa: totalSisaBaru,
+    jumlahBelumLunas: jumlahBelumBaru,
+    status: jumlahBelumBaru === 0 ? "Lunas" : "Belum Lunas",
+    updatedAt: serverTimestamp(),
+  });
+
+  batch.update(trxRef, {
+    dibatalkan: true,
+    cancelledAt: serverTimestamp(),
+  });
+
+  await batch.commit();
+
+  return {
+    nis,
+    nama: trx.nama,
+    billId,
+    billName: trx.namaTagihan,
+  };
 }
