@@ -15,6 +15,12 @@ import {
 import StatCard from "../components/ui/StatCard";
 import useDashboard from "../hooks/useDashboard";
 
+const ANGKATAN_COLORS = ["#17225E", "#2540C9", "#8CA0F2", "#C4CFF7"];
+
+function colorForAngkatan(idx) {
+  return ANGKATAN_COLORS[idx % ANGKATAN_COLORS.length];
+}
+
 function rupiah(v) {
   return "Rp " + Number(v || 0).toLocaleString("id-ID");
 }
@@ -26,21 +32,55 @@ function rupiahJuta(v) {
   );
 }
 
-function ChartTooltip({ active, payload, label }) {
+function initials(name = "") {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+function MonthlyTooltip({ active, payload, label, angkatanList }) {
   if (!active || !payload || !payload.length) return null;
-  const dibayar = payload.find((p) => p.dataKey === "Dibayar")?.value || 0;
-  const sisa = payload.find((p) => p.dataKey === "Sisa")?.value || 0;
+
+  const total = angkatanList.reduce(
+    (sum, a) => sum + (payload.find((p) => p.dataKey === a)?.value || 0),
+    0,
+  );
+
   return (
-    <div className="rounded-lg bg-zinc-900/95 text-white text-[11px] leading-tight px-3 py-2 shadow-lg pointer-events-none">
-      <p className="font-semibold mb-1">{label}</p>
-      <p className="flex justify-between gap-4">
-        <span className="text-zinc-400">Dibayar</span>
-        <span className="font-semibold">{rupiah(dibayar)}</span>
+    <div className="rounded-lg bg-white dark:bg-[#1C1E26] border border-zinc-200 dark:border-white/10 shadow-lg shadow-black/5 text-[11px] leading-tight px-3.5 py-2.5 pointer-events-none">
+      <p className="font-semibold text-zinc-800 dark:text-white mb-1.5">
+        {label}
       </p>
-      <p className="flex justify-between gap-4">
-        <span className="text-zinc-400">Sisa</span>
-        <span className="font-semibold text-rose-300">{rupiah(sisa)}</span>
-      </p>
+      {angkatanList.map((a, idx) => {
+        const value = payload.find((p) => p.dataKey === a)?.value || 0;
+        return (
+          <p
+            key={a}
+            className="flex items-center justify-between gap-6 text-zinc-500 dark:text-zinc-400 mt-1 first:mt-0"
+          >
+            <span className="flex items-center gap-1.5">
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: colorForAngkatan(idx) }}
+              />
+              Angkatan {a}
+            </span>
+            <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">
+              {rupiah(value)}
+            </span>
+          </p>
+        );
+      })}
+      <div className="flex items-center justify-between gap-6 text-zinc-500 dark:text-zinc-400 mt-1.5 pt-1.5 border-t border-zinc-100 dark:border-white/10">
+        <span>Total</span>
+        <span className="font-semibold text-[#0E9F6E] tabular-nums">
+          {rupiah(total)}
+        </span>
+      </div>
     </div>
   );
 }
@@ -48,39 +88,36 @@ function ChartTooltip({ active, payload, label }) {
 export default function Dashboard() {
   const { summary } = useDashboard();
 
-  const chartData = summary.jurusanChart.map((j) => ({
-    name: j.name,
-    Dibayar: j.Dibayar,
-    Sisa: Math.max((j.Tagihan || 0) - (j.Dibayar || 0), 0),
-  }));
-
   return (
-    <div className="h-[calc(100vh-82px)] flex flex-col gap-4 overflow-hidden pb-2">
+    <div
+      className="h-[calc(100vh-82px)] flex flex-col gap-4 overflow-hidden pb-2"
+      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+    >
       {/* Mini Cards */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard
           title="Total Tagihan"
           value={rupiah(summary.totalTagihan)}
           icon={HiBanknotes}
-          color="bg-indigo-500"
+          color="#2540C9"
         />
         <StatCard
           title="Total Uang Masuk"
           value={rupiah(summary.totalDibayar)}
           icon={HiCreditCard}
-          color="bg-emerald-500"
+          color="#0E9F6E"
         />
         <StatCard
           title="Sisa Tagihan"
           value={rupiah(summary.totalTunggakan)}
           icon={HiExclamationTriangle}
-          color="bg-rose-500"
+          color="#C6362A"
         />
         <StatCard
           title="Total Siswa"
           value={summary.totalSiswa}
           icon={HiUsers}
-          color="bg-amber-500"
+          color="#B5791E"
         />
       </div>
 
@@ -89,96 +126,118 @@ export default function Dashboard() {
         {/* LEFT */}
         <div className="col-span-8 flex flex-col gap-4 min-h-0">
           {/* Grafik */}
-          <div className="flex-[3] min-h-0 rounded-2xl bg-white/70 dark:bg-darkcard/70 backdrop-blur-xl shadow-xl border border-white/20 p-5 flex flex-col">
-            <div className="flex justify-between items-center mb-2 shrink-0">
-              <h3 className="font-bold text-lg dark:text-white">
-                Laporan Tagihan per Jurusan
-              </h3>
-              <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 font-semibold">
+          <div className="flex-[3] min-h-0 rounded-xl bg-white dark:bg-[#181A20] border border-zinc-200/80 dark:border-white/10 p-5 flex flex-col">
+            <div className="flex justify-between items-start mb-4 shrink-0">
+              <div>
+                <h3 className="font-display font-semibold text-[15px] text-zinc-900 dark:text-white">
+                  Laporan Bulanan Uang Masuk
+                </h3>
+                <div className="flex items-center gap-4 mt-2 text-[12px] text-zinc-500 dark:text-zinc-400 flex-wrap">
+                  {summary.angkatanList.length === 0 ? (
+                    <span>Juli - Juni</span>
+                  ) : (
+                    summary.angkatanList.map((a, idx) => (
+                      <span key={a} className="flex items-center gap-1.5">
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: colorForAngkatan(idx) }}
+                        />
+                        Angkatan {a}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+              <span className="text-[12px] px-2.5 py-1 rounded-md bg-[#0E9F6E1A] text-[#0E9F6E] font-semibold shrink-0">
                 +{summary.collectionRate}%
               </span>
             </div>
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} barSize={26}>
+                <BarChart data={summary.monthlyChart} barSize={20}>
                   <CartesianGrid
                     vertical={false}
-                    strokeDasharray="4 4"
-                    opacity={0.1}
+                    strokeDasharray="3 3"
+                    stroke="#E5E7EF"
+                    opacity={0.7}
                   />
                   <XAxis
                     dataKey="name"
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fill: "#9AA0B4" }}
                   />
                   <Tooltip
-                    cursor={{ fill: "transparent" }}
-                    content={<ChartTooltip />}
+                    cursor={{ fill: "rgba(37,64,201,0.05)" }}
+                    content={
+                      <MonthlyTooltip angkatanList={summary.angkatanList} />
+                    }
                   />
-                  <Bar
-                    dataKey="Dibayar"
-                    stackId="a"
-                    fill="#18181b"
-                    radius={[0, 0, 6, 6]}
-                    activeBar={{ fill: "#18181b" }}
-                  />
-                  <Bar
-                    dataKey="Sisa"
-                    stackId="a"
-                    fill="#d4d4d8"
-                    radius={[6, 6, 0, 0]}
-                    activeBar={{ fill: "#d4d4d8" }}
-                  />
+                  {summary.angkatanList.map((a, idx) => (
+                    <Bar
+                      key={a}
+                      dataKey={a}
+                      name={`Angkatan ${a}`}
+                      stackId="a"
+                      fill={colorForAngkatan(idx)}
+                      radius={
+                        idx === summary.angkatanList.length - 1
+                          ? [4, 4, 0, 0]
+                          : idx === 0
+                            ? [0, 0, 4, 4]
+                            : [0, 0, 0, 0]
+                      }
+                    />
+                  ))}
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Transaksi Terbaru */}
-          <div className="flex-[2] min-h-0 rounded-2xl bg-white/70 dark:bg-darkcard/70 backdrop-blur-xl shadow-xl border border-white/20 p-5 flex flex-col">
-            <h3 className="font-bold text-lg mb-2 dark:text-white shrink-0">
+          <div className="flex-[2] min-h-0 rounded-xl bg-white dark:bg-[#181A20] border border-zinc-200/80 dark:border-white/10 p-5 flex flex-col">
+            <h3 className="font-display font-semibold text-[15px] text-zinc-900 dark:text-white mb-1 shrink-0">
               Transaksi Terbaru
             </h3>
             <div className="custom-scroll flex-1 min-h-0 overflow-y-auto pr-1">
               {summary.recentPayments.length === 0 ? (
-                <p className="text-sm text-gray-400">Belum ada transaksi.</p>
+                <p className="text-[13px] text-zinc-400 pt-3">
+                  Belum ada transaksi.
+                </p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-400 text-xs">
-                      <th className="pb-2 font-medium">Nama</th>
-                      <th className="pb-2 font-medium">NIS</th>
-                      <th className="pb-2 font-medium text-right">Nominal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.recentPayments.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border-t border-zinc-100 dark:border-zinc-700"
-                      >
-                        <td className="py-2 font-semibold dark:text-white">
+                <div className="divide-y divide-zinc-100 dark:divide-white/5">
+                  {summary.recentPayments.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 py-2.5"
+                    >
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-[#2540C90D] text-[#2540C9] flex items-center justify-center text-[11px] font-semibold">
+                        {initials(item.nama)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-medium text-zinc-800 dark:text-white truncate">
                           {item.nama}
-                        </td>
-                        <td className="py-2 text-gray-500">{item.nis}</td>
-                        <td className="py-2 text-right font-bold text-emerald-600">
-                          {rupiah(item.nominal)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </p>
+                        <p className="text-[12px] text-zinc-400">{item.nis}</p>
+                      </div>
+                      <span className="text-[13px] font-semibold text-[#0E9F6E] tabular-nums shrink-0">
+                        {rupiah(item.nominal)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* RIGHT: Item Tagihan */}
-        <div className="col-span-4 min-h-0 rounded-2xl bg-white/70 dark:bg-darkcard/70 backdrop-blur-xl shadow-xl border border-white/20 p-5 flex flex-col">
-          <div className="flex justify-between items-center mb-3 shrink-0">
-            <h3 className="font-bold text-lg dark:text-white">Item Tagihan</h3>
-            <span className="text-xs text-gray-400">per Jurusan</span>
+        {/* RIGHT: Item Tagihan per Jurusan */}
+        <div className="col-span-4 min-h-0 rounded-xl bg-white dark:bg-[#181A20] border border-zinc-200/80 dark:border-white/10 p-5 flex flex-col">
+          <div className="flex justify-between items-baseline mb-4 shrink-0">
+            <h3 className="font-display font-semibold text-[15px] text-zinc-900 dark:text-white">
+              Total Tagihan
+            </h3>
+            <span className="text-[12px] text-zinc-400">per Jurusan</span>
           </div>
           <div className="custom-scroll flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
             {summary.jurusanChart.map((j) => {
@@ -189,25 +248,36 @@ export default function Dashboard() {
               return (
                 <div
                   key={j.name}
-                  className="rounded-xl bg-zinc-50 dark:bg-zinc-800 p-3"
+                  className="rounded-lg border border-zinc-100 dark:border-white/5 p-3.5"
                 >
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-sm font-semibold dark:text-white truncate">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[13px] font-medium text-zinc-800 dark:text-white truncate">
                       {j.name}
                     </span>
-                    <span className="text-xs font-bold text-emerald-600 shrink-0">
+                    <span className="text-[12px] font-semibold text-[#2540C9] shrink-0">
                       {pct}%
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden mb-1.5">
+                  <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-white/10 overflow-hidden mb-2">
                     <div
-                      className="h-full rounded-full bg-zinc-900 dark:bg-white transition-all duration-700"
+                      className="h-full rounded-full bg-[#2540C9] transition-all duration-700"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <span className="text-xs text-gray-400">
-                    Uang Masuk: {rupiahJuta(j.Dibayar)}
-                  </span>
+                  <div className="flex items-center justify-between text-[12px] text-zinc-400">
+                    <span>
+                      Total:{" "}
+                      <span className="text-zinc-600 dark:text-zinc-300 font-medium">
+                        {rupiahJuta(j.Tagihan)}
+                      </span>
+                    </span>
+                    <span>
+                      Masuk:{" "}
+                      <span className="text-[#0E9F6E] font-medium">
+                        {rupiahJuta(j.Dibayar)}
+                      </span>
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -215,11 +285,18 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Scrollbar modern (menggantikan scrollbar bawaan browser) */}
+      {/* Font & scrollbar */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+        .font-display {
+          font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+          letter-spacing: -0.01em;
+        }
+
         .custom-scroll {
           scrollbar-width: thin;
-          scrollbar-color: rgba(113, 113, 122, 0.4) transparent;
+          scrollbar-color: rgba(113, 113, 122, 0.35) transparent;
         }
         .custom-scroll::-webkit-scrollbar {
           width: 5px;
@@ -228,17 +305,17 @@ export default function Dashboard() {
           background: transparent;
         }
         .custom-scroll::-webkit-scrollbar-thumb {
-          background-color: rgba(113, 113, 122, 0.35);
+          background-color: rgba(113, 113, 122, 0.3);
           border-radius: 9999px;
         }
         .custom-scroll::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(113, 113, 122, 0.6);
+          background-color: rgba(113, 113, 122, 0.55);
         }
         .dark .custom-scroll::-webkit-scrollbar-thumb {
-          background-color: rgba(212, 212, 216, 0.25);
+          background-color: rgba(212, 212, 216, 0.2);
         }
         .dark .custom-scroll::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(212, 212, 216, 0.45);
+          background-color: rgba(212, 212, 216, 0.4);
         }
       `}</style>
     </div>
