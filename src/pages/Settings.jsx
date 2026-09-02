@@ -5,6 +5,7 @@ export default function Settings() {
       <p className="text-1xl  dark:text-white">Email: Rizki@gmail.com</p>
       <p className="text-1xl dark:text-white">Pass: Dipcip123</p> <br /> <br />
       <br />
+      <p className="text-1xl dark:text-white">ysl@proton.uk</p> <br /> <br />
       <br />
       <footer className="text-xl font-semibold dark:text-white">
         #SatuPintu
