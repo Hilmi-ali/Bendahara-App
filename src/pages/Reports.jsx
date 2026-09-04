@@ -85,6 +85,56 @@ function PeriodSummaryCard({ title, period, total, count, icon: Icon }) {
   );
 }
 
+function JurusanSummaryCard({ title, total, icon: Icon, variant = "default" }) {
+  const styles = {
+    AKL: {
+      icon: "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
+      badge:
+        "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
+    },
+    TJKT: {
+      icon: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
+      badge: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
+    },
+    TOTAL: {
+      icon: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+      badge: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+    },
+  };
+
+  const style = styles[variant] || styles.TOTAL;
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+            {title}
+          </p>
+
+          <span
+            className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${style.badge}`}
+          >
+            Total Tagihan
+          </span>
+        </div>
+
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${style.icon}`}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <p className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+          {rupiah(total)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function Reports() {
   const {
     reports,
@@ -104,12 +154,6 @@ export default function Reports() {
 
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  /*
-   * =========================================================
-   * FILTER EXPORT
-   * =========================================================
-   */
-
   const [exportPeriod, setExportPeriod] = useState("monthly");
 
   const [exportMonth, setExportMonth] = useState(new Date().getMonth() + 1);
@@ -117,12 +161,6 @@ export default function Reports() {
   const [exportYear, setExportYear] = useState(new Date().getFullYear());
 
   const [exportJurusan, setExportJurusan] = useState("");
-
-  /*
-   * =========================================================
-   * FILTER SISWA
-   * =========================================================
-   */
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -143,23 +181,33 @@ export default function Reports() {
     });
   }, [reports, search, jurusan, angkatan]);
 
-  /*
-   * =========================================================
-   * ANGKATAN
-   * =========================================================
-   */
-
   const angkatanList = useMemo(() => {
     return [...new Set(reports.map((s) => s.angkatan))]
       .filter(Boolean)
       .sort((a, b) => Number(b) - Number(a));
   }, [reports]);
+  const jurusanSummary = useMemo(() => {
+    let akl = 0;
+    let tjkt = 0;
 
-  /*
-   * =========================================================
-   * LABEL PERIODE
-   * =========================================================
-   */
+    reports.forEach((student) => {
+      const total = Number(student.totalTagihan || 0);
+
+      if (student.jurusan === "AKL") {
+        akl += total;
+      }
+
+      if (student.jurusan === "TJKT") {
+        tjkt += total;
+      }
+    });
+
+    return {
+      AKL: akl,
+      TJKT: tjkt,
+      total: akl + tjkt,
+    };
+  }, [reports]);
 
   const monthLabel = useMemo(() => {
     return new Date(exportYear, Number(exportMonth) - 1, 1).toLocaleString(
@@ -179,12 +227,6 @@ export default function Reports() {
     return `Tahun ${exportYear}`;
   }, [exportPeriod, monthLabel, exportYear]);
 
-  /*
-   * =========================================================
-   * OPEN EXPORT
-   * =========================================================
-   */
-
   async function handleOpenExport() {
     try {
       await loadFinancialReport({
@@ -201,12 +243,6 @@ export default function Reports() {
       alert("Gagal menyiapkan laporan keuangan. Silakan coba lagi.");
     }
   }
-
-  /*
-   * =========================================================
-   * EXPORT
-   * =========================================================
-   */
 
   async function handleExport() {
     try {
@@ -226,10 +262,6 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
-
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -257,11 +289,6 @@ export default function Reports() {
           {financialLoading ? "Menyiapkan..." : "Export Laporan Keuangan"}
         </Button>
       </div>
-
-      {/* =====================================================
-          SUMMARY
-      ===================================================== */}
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <PeriodSummaryCard
           title="Uang Masuk Bulan Ini"
@@ -282,205 +309,28 @@ export default function Reports() {
           icon={HiOutlineBanknotes}
         />
       </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <JurusanSummaryCard
+          title="Tagihan AKL"
+          total={jurusanSummary.AKL}
+          icon={HiOutlineUsers}
+          variant="AKL"
+        />
 
-      {/* =====================================================
-          FILTER DATA SISWA
-      ===================================================== */}
+        <JurusanSummaryCard
+          title="Tagihan TJKT"
+          total={jurusanSummary.TJKT}
+          icon={HiOutlineUsers}
+          variant="TJKT"
+        />
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mb-4 flex items-center gap-2">
-          <HiOutlineUsers className="h-5 w-5 text-zinc-500" />
-
-          <h2 className="font-semibold text-zinc-900 dark:text-white">
-            Filter Data Siswa
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          {/* SEARCH */}
-
-          <div className="relative md:col-span-2">
-            <HiMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-zinc-400" />
-
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari nama atau NIS..."
-              className="pl-10"
-            />
-          </div>
-
-          {/* JURUSAN */}
-
-          <select
-            value={jurusan}
-            onChange={(e) => setJurusan(e.target.value)}
-            className="h-10 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-          >
-            <option value="">Semua Jurusan</option>
-            <option value="AKL">AKL</option>
-            <option value="TJKT">TJKT</option>
-          </select>
-
-          {/* ANGKATAN */}
-
-          <select
-            value={angkatan}
-            onChange={(e) => setAngkatan(e.target.value)}
-            className="h-10 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-          >
-            <option value="">Semua Angkatan</option>
-
-            {angkatanList.map((item) => (
-              <option key={item} value={item}>
-                Angkatan {item}
-              </option>
-            ))}
-          </select>
-        </div>
+        <JurusanSummaryCard
+          title="Total Seluruh Tagihan"
+          total={jurusanSummary.total}
+          icon={HiOutlineBanknotes}
+          variant="TOTAL"
+        />
       </div>
-
-      {/* =====================================================
-          STUDENT REPORT
-      ===================================================== */}
-
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex flex-col gap-2 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="font-semibold text-zinc-900 dark:text-white">
-              Rekap Tagihan Siswa
-            </h2>
-
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Menampilkan {filtered.length.toLocaleString("id-ID")} siswa
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={loading}
-            className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-white"
-          >
-            {loading ? "Memuat..." : "Refresh"}
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-[950px] w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/40">
-                <th className="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">
-                  Siswa
-                </th>
-
-                <th className="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">
-                  NIS
-                </th>
-
-                <th className="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">
-                  Jurusan
-                </th>
-
-                <th className="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">
-                  Angkatan
-                </th>
-
-                <th className="px-4 py-3 text-right font-semibold text-zinc-600 dark:text-zinc-400">
-                  Total Tagihan
-                </th>
-
-                <th className="px-4 py-3 text-right font-semibold text-zinc-600 dark:text-zinc-400">
-                  Dibayar
-                </th>
-
-                <th className="px-4 py-3 text-right font-semibold text-zinc-600 dark:text-zinc-400">
-                  Potongan
-                </th>
-
-                <th className="px-4 py-3 text-right font-semibold text-zinc-600 dark:text-zinc-400">
-                  Sisa
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-12 text-center text-zinc-500"
-                  >
-                    Memuat laporan...
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-12 text-center text-zinc-500"
-                  >
-                    Tidak ada data laporan.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((student) => (
-                  <tr
-                    key={student.id}
-                    className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50 dark:border-zinc-800/70 dark:hover:bg-zinc-800/30"
-                  >
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                          {initials(student.nama)}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-zinc-900 dark:text-white">
-                            {student.nama || "-"}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-3.5 text-zinc-600 dark:text-zinc-400">
-                      {student.nis || "-"}
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      <JurusanBadge value={student.jurusan} />
-                    </td>
-
-                    <td className="px-4 py-3.5 text-zinc-600 dark:text-zinc-400">
-                      {student.angkatan || "-"}
-                    </td>
-
-                    <td className="px-4 py-3.5 text-right font-medium text-zinc-800 dark:text-zinc-200">
-                      {rupiah(student.totalTagihan)}
-                    </td>
-
-                    <td className="px-4 py-3.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
-                      {rupiah(student.totalDibayar)}
-                    </td>
-
-                    <td className="px-4 py-3.5 text-right text-amber-600 dark:text-amber-400">
-                      {rupiah(student.totalPotongan)}
-                    </td>
-
-                    <td className="px-4 py-3.5 text-right font-semibold text-red-600 dark:text-red-400">
-                      {rupiah(student.totalSisa)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* =====================================================
-          EXCEL PREVIEW
-      ===================================================== */}
 
       <ExcelPreviewModal
         open={previewOpen}
