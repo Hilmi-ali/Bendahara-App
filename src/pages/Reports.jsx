@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
+
 import {
   HiDocumentArrowDown,
   HiMagnifyingGlass,
   HiOutlineBanknotes,
   HiOutlineCalendarDays,
   HiOutlineUsers,
-  HiOutlineFaceSmile,
 } from "react-icons/hi2";
 
 import Input from "../components/ui/Input";
@@ -25,13 +25,17 @@ const JURUSAN_STYLE = {
 };
 
 function JurusanBadge({ value }) {
-  if (!value) return <span className="text-zinc-400">-</span>;
+  if (!value) {
+    return <span className="text-zinc-400">-</span>;
+  }
+
   const style =
     JURUSAN_STYLE[value] ||
     "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300";
+
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${style}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${style}`}
     >
       {value}
     </span>
@@ -47,18 +51,87 @@ function initials(name = "") {
     .join("");
 }
 
+function PeriodSummaryCard({ title, period, total, count, icon: Icon }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+            {title}
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+            {period}
+          </p>
+        </div>
+
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <p className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+          {rupiah(total)}
+        </p>
+
+        <div className="mt-2 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+          <HiOutlineBanknotes className="h-4 w-4" />
+
+          <span>{Number(count || 0).toLocaleString("id-ID")} transaksi</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Reports() {
-  const { reports, summary, loading, exportExcel } = useReports();
+  const {
+    reports,
+    summary,
+    loading,
+    refresh,
+
+    financialReport,
+    financialLoading,
+    loadFinancialReport,
+    exportExcel,
+  } = useReports();
+
   const [search, setSearch] = useState("");
   const [jurusan, setJurusan] = useState("");
   const [angkatan, setAngkatan] = useState("");
+
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  /*
+   * =========================================================
+   * FILTER EXPORT
+   * =========================================================
+   */
+
+  const [exportPeriod, setExportPeriod] = useState("monthly");
+
+  const [exportMonth, setExportMonth] = useState(new Date().getMonth() + 1);
+
+  const [exportYear, setExportYear] = useState(new Date().getFullYear());
+
+  const [exportJurusan, setExportJurusan] = useState("");
+
+  /*
+   * =========================================================
+   * FILTER SISWA
+   * =========================================================
+   */
+
   const filtered = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+
     return reports.filter((s) => {
       const cocokNama =
-        s.nama?.toLowerCase().includes(search.toLowerCase()) ||
-        s.nis?.includes(search);
+        !keyword ||
+        s.nama?.toLowerCase().includes(keyword) ||
+        String(s.nis || "").includes(keyword);
 
       const cocokJurusan = jurusan ? s.jurusan === jurusan : true;
 
@@ -70,247 +143,361 @@ export default function Reports() {
     });
   }, [reports, search, jurusan, angkatan]);
 
-  const angkatanList = [...new Set(reports.map((s) => s.angkatan))]
-    .filter(Boolean)
-    .sort((a, b) => b - a);
+  /*
+   * =========================================================
+   * ANGKATAN
+   * =========================================================
+   */
+
+  const angkatanList = useMemo(() => {
+    return [...new Set(reports.map((s) => s.angkatan))]
+      .filter(Boolean)
+      .sort((a, b) => Number(b) - Number(a));
+  }, [reports]);
+
+  /*
+   * =========================================================
+   * LABEL PERIODE
+   * =========================================================
+   */
+
+  const monthLabel = useMemo(() => {
+    return new Date(exportYear, Number(exportMonth) - 1, 1).toLocaleString(
+      "id-ID",
+      {
+        month: "long",
+        year: "numeric",
+      },
+    );
+  }, [exportMonth, exportYear]);
+
+  const periodLabel = useMemo(() => {
+    if (exportPeriod === "monthly") {
+      return monthLabel;
+    }
+
+    return `Tahun ${exportYear}`;
+  }, [exportPeriod, monthLabel, exportYear]);
+
+  /*
+   * =========================================================
+   * OPEN EXPORT
+   * =========================================================
+   */
+
+  async function handleOpenExport() {
+    try {
+      await loadFinancialReport({
+        period: exportPeriod,
+        month: Number(exportMonth),
+        year: Number(exportYear),
+        jurusan: exportJurusan,
+      });
+
+      setPreviewOpen(true);
+    } catch (error) {
+      console.error("Gagal menyiapkan laporan keuangan:", error);
+
+      alert("Gagal menyiapkan laporan keuangan. Silakan coba lagi.");
+    }
+  }
+
+  /*
+   * =========================================================
+   * EXPORT
+   * =========================================================
+   */
+
+  async function handleExport() {
+    try {
+      await exportExcel({
+        period: exportPeriod,
+        month: Number(exportMonth),
+        year: Number(exportYear),
+        jurusan: exportJurusan,
+        data: financialReport,
+      });
+    } catch (error) {
+      console.error("Gagal export laporan:", error);
+
+      alert("Gagal membuat file Excel. Silakan coba lagi.");
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {/* FILTER */}
-      <div className="rounded-3xl bg-white/70 dark:bg-darkcard/70 backdrop-blur-xl shadow-lg shadow-black/5 border border-white/20 dark:border-white/5 p-5">
-        <div className="flex flex-wrap gap-3">
-          <div className="w-full sm:w-72">
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+              Laporan
+            </h1>
+
+            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              KEUANGAN
+            </span>
+          </div>
+
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Rekap pembayaran dan laporan keuangan sekolah
+          </p>
+        </div>
+
+        <Button
+          onClick={handleOpenExport}
+          disabled={financialLoading}
+          className="inline-flex items-center justify-center gap-2"
+        >
+          <HiDocumentArrowDown className="h-5 w-5" />
+
+          {financialLoading ? "Menyiapkan..." : "Export Laporan Keuangan"}
+        </Button>
+      </div>
+
+      {/* =====================================================
+          SUMMARY
+      ===================================================== */}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <PeriodSummaryCard
+          title="Uang Masuk Bulan Ini"
+          period={new Date().toLocaleString("id-ID", {
+            month: "long",
+            year: "numeric",
+          })}
+          total={summary.monthlySummary.total}
+          count={summary.monthlySummary.count}
+          icon={HiOutlineCalendarDays}
+        />
+
+        <PeriodSummaryCard
+          title="Uang Masuk Tahun Ini"
+          period={`Tahun ${new Date().getFullYear()}`}
+          total={summary.yearlySummary.total}
+          count={summary.yearlySummary.count}
+          icon={HiOutlineBanknotes}
+        />
+      </div>
+
+      {/* =====================================================
+          FILTER DATA SISWA
+      ===================================================== */}
+
+      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mb-4 flex items-center gap-2">
+          <HiOutlineUsers className="h-5 w-5 text-zinc-500" />
+
+          <h2 className="font-semibold text-zinc-900 dark:text-white">
+            Filter Data Siswa
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          {/* SEARCH */}
+
+          <div className="relative md:col-span-2">
+            <HiMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-zinc-400" />
+
             <Input
-              icon={HiMagnifyingGlass}
-              placeholder="Cari nama atau NIS siswa..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari nama atau NIS..."
+              className="pl-10"
             />
           </div>
 
-          <select
-            className="w-full sm:w-44 h-11 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-darkcard px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-shadow dark:text-white"
-            value={jurusan}
-            onChange={(e) => setJurusan(e.target.value)}
-          >
-            <option value="">Semua Jurusan</option>
-            <option value="TJKT">TJKT</option>
-            <option value="AKL">AKL</option>
-          </select>
+          {/* JURUSAN */}
 
           <select
-            className="w-full sm:w-40 h-11 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-darkcard px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-shadow dark:text-white"
+            value={jurusan}
+            onChange={(e) => setJurusan(e.target.value)}
+            className="h-10 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+          >
+            <option value="">Semua Jurusan</option>
+            <option value="AKL">AKL</option>
+            <option value="TJKT">TJKT</option>
+          </select>
+
+          {/* ANGKATAN */}
+
+          <select
             value={angkatan}
             onChange={(e) => setAngkatan(e.target.value)}
+            className="h-10 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
           >
             <option value="">Semua Angkatan</option>
-            {angkatanList.map((a) => (
-              <option key={a} value={a}>
-                {a}
+
+            {angkatanList.map((item) => (
+              <option key={item} value={item}>
+                Angkatan {item}
               </option>
             ))}
           </select>
+        </div>
+      </div>
 
-          {(search || jurusan || angkatan) && (
-            <span className="self-center text-xs text-zinc-400">
-              {filtered.length} hasil ditemukan
-            </span>
-          )}
+      {/* =====================================================
+          STUDENT REPORT
+      ===================================================== */}
 
-          <div className="flex-1" />
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex flex-col gap-2 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="font-semibold text-zinc-900 dark:text-white">
+              Rekap Tagihan Siswa
+            </h2>
 
-          <Button
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            icon={HiDocumentArrowDown}
-            onClick={() => setPreviewOpen(true)}
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Menampilkan {filtered.length.toLocaleString("id-ID")} siswa
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={loading}
+            className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-white"
           >
-            Export Excel
-          </Button>
-        </div>
-      </div>
-
-      {/* SUMMARY */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <div className="relative overflow-hidden rounded-3xl bg-white/70 dark:bg-darkcard/70 backdrop-blur-xl shadow-lg shadow-black/5 border border-white/20 dark:border-white/5 p-6">
-          <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-indigo-500 opacity-10 blur-2xl" />
-          <div className="relative flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-              <HiOutlineCalendarDays size={20} />
-            </div>
-            <h3 className="font-bold text-lg dark:text-white">
-              Ringkasan Bulan Ini
-            </h3>
-          </div>
-
-          <div className="relative space-y-3">
-            <div className="flex justify-between items-center py-2 border-b border-dashed border-zinc-200 dark:border-zinc-700">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                Total Pembayaran
-              </span>
-              <b className="text-lg dark:text-white">
-                {rupiah(summary.monthlySummary.count)}
-              </b>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                Jumlah Transaksi
-              </span>
-              <b className="text-lg dark:text-white">
-                {summary.monthlySummary.count}
-              </b>
-            </div>
-          </div>
+            {loading ? "Memuat..." : "Refresh"}
+          </button>
         </div>
 
-        <div className="relative overflow-hidden rounded-3xl bg-white/70 dark:bg-darkcard/70 backdrop-blur-xl shadow-lg shadow-black/5 border border-white/20 dark:border-white/5 p-6">
-          <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-emerald-500 opacity-10 blur-2xl" />
-          <div className="relative flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-              <HiOutlineUsers size={20} />
-            </div>
-            <h3 className="font-bold text-lg dark:text-white">
-              Ringkasan Tahun Ini
-            </h3>
-          </div>
-
-          <div className="relative space-y-3">
-            <div className="flex justify-between items-center py-2 border-b border-dashed border-zinc-200 dark:border-zinc-700">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                Total Pembayaran
-              </span>
-              <b className="text-lg dark:text-white">
-                {rupiah(summary.yearlySummary.count)}
-              </b>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                Jumlah Transaksi
-              </span>
-              <b className="text-lg dark:text-white">
-                {summary.yearlySummary.count}
-              </b>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* TABLE */}
-      <div className="rounded-3xl bg-white/70 dark:bg-darkcard/70 backdrop-blur-xl shadow-lg shadow-black/5 border border-white/20 dark:border-white/5 overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="custom-scroll max-h-[560px] overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-zinc-50 dark:bg-zinc-800/95 backdrop-blur">
-                <tr className="text-left text-zinc-500 dark:text-zinc-400">
-                  <th className="p-4 font-semibold">NIS</th>
-                  <th className="font-semibold">Nama</th>
-                  <th className="font-semibold">Jurusan</th>
-                  <th className="font-semibold">Angkatan</th>
-                  <th className="font-semibold">Total Tagihan</th>
-                  <th className="font-semibold">Dibayar</th>
-                  <th className="font-semibold">Potongan</th>
-                  <th className="font-semibold">Sisa</th>
-                </tr>
-              </thead>
+          <table className="min-w-[950px] w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/40">
+                <th className="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">
+                  Siswa
+                </th>
 
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="p-10 text-center text-zinc-400">
-                      Memuat data laporan...
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="p-10">
-                      <div className="flex flex-col items-center gap-2 text-zinc-400">
-                        <HiOutlineFaceSmile size={32} />
-                        <span className="text-sm">
-                          Tidak ada data yang cocok dengan filter.
-                        </span>
+                <th className="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">
+                  NIS
+                </th>
+
+                <th className="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">
+                  Jurusan
+                </th>
+
+                <th className="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">
+                  Angkatan
+                </th>
+
+                <th className="px-4 py-3 text-right font-semibold text-zinc-600 dark:text-zinc-400">
+                  Total Tagihan
+                </th>
+
+                <th className="px-4 py-3 text-right font-semibold text-zinc-600 dark:text-zinc-400">
+                  Dibayar
+                </th>
+
+                <th className="px-4 py-3 text-right font-semibold text-zinc-600 dark:text-zinc-400">
+                  Potongan
+                </th>
+
+                <th className="px-4 py-3 text-right font-semibold text-zinc-600 dark:text-zinc-400">
+                  Sisa
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-12 text-center text-zinc-500"
+                  >
+                    Memuat laporan...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-12 text-center text-zinc-500"
+                  >
+                    Tidak ada data laporan.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((student) => (
+                  <tr
+                    key={student.id}
+                    className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50 dark:border-zinc-800/70 dark:hover:bg-zinc-800/30"
+                  >
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                          {initials(student.nama)}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-zinc-900 dark:text-white">
+                            {student.nama || "-"}
+                          </p>
+                        </div>
                       </div>
                     </td>
+
+                    <td className="px-4 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {student.nis || "-"}
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      <JurusanBadge value={student.jurusan} />
+                    </td>
+
+                    <td className="px-4 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {student.angkatan || "-"}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-right font-medium text-zinc-800 dark:text-zinc-200">
+                      {rupiah(student.totalTagihan)}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                      {rupiah(student.totalDibayar)}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-right text-amber-600 dark:text-amber-400">
+                      {rupiah(student.totalPotongan)}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-right font-semibold text-red-600 dark:text-red-400">
+                      {rupiah(student.totalSisa)}
+                    </td>
                   </tr>
-                ) : (
-                  filtered.map((item) => (
-                    <tr
-                      key={item.nis}
-                      className="border-t border-zinc-100 dark:border-zinc-700/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors"
-                    >
-                      <td className="p-4 font-medium text-zinc-500 dark:text-zinc-400">
-                        {item.nis}
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                            {initials(item.nama)}
-                          </div>
-                          <span className="font-semibold dark:text-white">
-                            {item.nama}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <JurusanBadge value={item.jurusan} />
-                      </td>
-                      <td className="dark:text-zinc-300">{item.angkatan}</td>
-                      <td className="dark:text-zinc-300">
-                        {rupiah(item.totalTagihan)}
-                      </td>
-                      <td className="text-green-600 dark:text-green-400 font-semibold">
-                        {rupiah(item.totalDibayar)}
-                      </td>
-
-                      <td className="text-amber-600 dark:text-amber-400 font-semibold">
-                        {rupiah(item.totalPotongan)}
-                      </td>
-
-                      <td className="text-red-500 dark:text-red-400 font-semibold">
-                        {rupiah(item.totalSisa)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Scrollbar modern untuk area tabel */}
-      <style>{`
-        .custom-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(113, 113, 122, 0.4) transparent;
-        }
-        .custom-scroll::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scroll::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-          background-color: rgba(113, 113, 122, 0.35);
-          border-radius: 9999px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(113, 113, 122, 0.6);
-        }
-        .dark .custom-scroll::-webkit-scrollbar-thumb {
-          background-color: rgba(212, 212, 216, 0.25);
-        }
-        .dark .custom-scroll::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(212, 212, 216, 0.45);
-        }
-      `}</style>
+      {/* =====================================================
+          EXCEL PREVIEW
+      ===================================================== */}
 
       <ExcelPreviewModal
         open={previewOpen}
-        data={filtered}
         onClose={() => setPreviewOpen(false)}
-        onExport={(rows) => {
-          exportExcel(rows);
-          setPreviewOpen(false);
-        }}
+        data={financialReport}
+        loading={financialLoading}
+        period={exportPeriod}
+        setPeriod={setExportPeriod}
+        month={exportMonth}
+        setMonth={setExportMonth}
+        year={exportYear}
+        setYear={setExportYear}
+        jurusan={exportJurusan}
+        setJurusan={setExportJurusan}
+        periodLabel={periodLabel}
+        onReload={loadFinancialReport}
+        onExport={handleExport}
       />
     </div>
   );

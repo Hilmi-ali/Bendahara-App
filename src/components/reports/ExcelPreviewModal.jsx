@@ -1,267 +1,669 @@
 import {
-  HiDocumentChartBar,
-  HiBanknotes,
-  HiCreditCard,
-  HiExclamationTriangle,
   HiXMark,
+  HiDocumentArrowDown,
+  HiOutlineCalendarDays,
+  HiOutlineBanknotes,
 } from "react-icons/hi2";
 
-import Button from "../ui/Button";
-
-function rupiah(v) {
-  return "Rp " + Number(v || 0).toLocaleString("id-ID");
+function rupiah(value) {
+  return "Rp " + Number(value || 0).toLocaleString("id-ID");
 }
 
-export default function ExcelPreviewModal({ open, data, onClose, onExport }) {
-  if (!open) return null;
+const MONTHS = [
+  {
+    value: 1,
+    label: "Januari",
+  },
+  {
+    value: 2,
+    label: "Februari",
+  },
+  {
+    value: 3,
+    label: "Maret",
+  },
+  {
+    value: 4,
+    label: "April",
+  },
+  {
+    value: 5,
+    label: "Mei",
+  },
+  {
+    value: 6,
+    label: "Juni",
+  },
+  {
+    value: 7,
+    label: "Juli",
+  },
+  {
+    value: 8,
+    label: "Agustus",
+  },
+  {
+    value: 9,
+    label: "September",
+  },
+  {
+    value: 10,
+    label: "Oktober",
+  },
+  {
+    value: 11,
+    label: "November",
+  },
+  {
+    value: 12,
+    label: "Desember",
+  },
+];
 
-  const totalTagihan = data.reduce(
-    (a, b) => a + Number(b.totalTagihan || 0),
-    0,
+function currentYear() {
+  return new Date().getFullYear();
+}
+
+function createYears() {
+  const now = currentYear();
+
+  return Array.from(
+    {
+      length: 6,
+    },
+    (_, index) => now - index,
+  );
+}
+
+export default function ExcelPreviewModal({
+  open,
+  onClose,
+
+  data = [],
+
+  loading = false,
+
+  period,
+  setPeriod,
+
+  month,
+  setMonth,
+
+  year,
+  setYear,
+
+  jurusan,
+  setJurusan,
+
+  periodLabel,
+
+  onReload,
+
+  onExport,
+}) {
+  if (!open) {
+    return null;
+  }
+
+  /*
+   * =========================================================
+   * TOTAL
+   * =========================================================
+   */
+
+  const total = data.reduce(
+    (acc, item) => {
+      const akl = item.AKL || {};
+
+      const tjkt = item.TJKT || {};
+
+      acc.aklTagihan += Number(akl.totalTagihan || 0);
+
+      acc.aklMasuk += Number(akl.terbayarkan || 0);
+
+      acc.aklSisa += Number(akl.sisa || 0);
+
+      acc.tjktTagihan += Number(tjkt.totalTagihan || 0);
+
+      acc.tjktMasuk += Number(tjkt.terbayarkan || 0);
+
+      acc.tjktSisa += Number(tjkt.sisa || 0);
+
+      return acc;
+    },
+    {
+      aklTagihan: 0,
+      aklMasuk: 0,
+      aklSisa: 0,
+
+      tjktTagihan: 0,
+      tjktMasuk: 0,
+      tjktSisa: 0,
+    },
   );
 
-  const totalDibayar = data.reduce(
-    (a, b) => a + Number(b.totalDibayar || 0),
-    0,
-  );
-  const totalPotongan = data.reduce(
-    (a, b) => a + Number(b.totalPotongan || 0),
-    0,
-  );
+  const totalTagihan = total.aklTagihan + total.tjktTagihan;
 
-  const totalSisa = data.reduce((a, b) => a + Number(b.totalSisa || 0), 0);
+  const totalMasuk = total.aklMasuk + total.tjktMasuk;
 
-  const sisaRows = Math.max(data.length - 10, 0);
+  const totalSisa = total.aklSisa + total.tjktSisa;
+
+  /*
+   * =========================================================
+   * RELOAD
+   * =========================================================
+   */
+
+  async function handleReload() {
+    if (!onReload) {
+      return;
+    }
+
+    await onReload({
+      period,
+
+      month: Number(month),
+
+      year: Number(year),
+
+      jurusan,
+    });
+  }
 
   return (
-    <div className="fixed inset-0 z-[999] bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5">
+      {/* BACKDROP */}
+
       <div
-        className="
-  w-full
-  max-w-5xl
-  max-h-[90vh]
-  rounded-2xl
-  overflow-hidden
-  border
-  border-zinc-200
-  dark:border-zinc-800
-  bg-white
-  dark:bg-[#0b0c0f]
-  shadow-2xl
-  shadow-black/20
-  flex
-  flex-col
-"
-      >
-        <div className="relative px-8 pt-7 pb-6 border-b border-zinc-100 dark:border-zinc-800">
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* MODAL */}
+
+      <div className="relative z-10 flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900">
+              <HiOutlineBanknotes className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-zinc-900 dark:text-white">
+                Export Laporan Keuangan
+              </h2>
+
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Rekap berdasarkan item tagihan
+              </p>
+            </div>
+          </div>
+
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-6 right-7 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            aria-label="Tutup"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
           >
-            <HiXMark size={18} />
+            <HiXMark className="h-5 w-5" />
           </button>
+        </div>
 
-          <p className="uppercase tracking-[2.5px] text-[11px] text-indigo-500 dark:text-indigo-400 font-semibold">
-            Export Preview
-          </p>
+        {/* =================================================
+            FILTER EXPORT
+        ================================================= */}
 
-          <h2 className="text-2xl font-bold mt-1.5 text-zinc-900 dark:text-white">
-            Preview Excel
-          </h2>
+        <div className="shrink-0 border-b border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            {/* PERIODE */}
 
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 text-sm">
-            Data yang akan diekspor ke Microsoft Excel
-          </p>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Periode
+              </label>
 
-          {/* QUICK STATS */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-              <div className="flex items-center gap-1.5 text-zinc-400 text-xs mb-1">
-                <HiDocumentChartBar size={14} />
-                Total Siswa
-              </div>
-              <div className="text-lg font-bold text-zinc-900 dark:text-white">
-                {data.length}
+              <div className="grid grid-cols-2 rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-700 dark:bg-zinc-900">
+                <button
+                  type="button"
+                  onClick={() => setPeriod("monthly")}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+                    period === "monthly"
+                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                      : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  Bulanan
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPeriod("yearly")}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+                    period === "yearly"
+                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                      : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  Tahunan
+                </button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-              <div className="flex items-center gap-1.5 text-blue-500 text-xs mb-1">
-                <HiBanknotes size={14} />
-                Total Tagihan
+            {/* BULAN */}
+
+            {period === "monthly" && (
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  Bulan
+                </label>
+
+                <select
+                  value={month}
+                  onChange={(e) => setMonth(Number(e.target.value))}
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                >
+                  {MONTHS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="text-lg font-bold text-zinc-900 dark:text-white truncate">
-                {rupiah(totalTagihan)}
-              </div>
+            )}
+
+            {/* TAHUN */}
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Tahun
+              </label>
+
+              <select
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+              >
+                {createYears().map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-              <div className="flex items-center gap-1.5 text-emerald-500 text-xs mb-1">
-                <HiCreditCard size={14} />
-                Dibayar
-              </div>
-              <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 truncate">
-                {rupiah(totalDibayar)}
-              </div>
-            </div>
+            {/* JURUSAN */}
 
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-              <div className="flex items-center gap-1.5 text-amber-500 text-xs mb-1">
-                <HiBanknotes size={14} />
-                Potongan
-              </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Jurusan
+              </label>
 
-              <div className="text-lg font-bold text-amber-600 dark:text-amber-400 truncate">
-                {rupiah(totalPotongan)}
-              </div>
-            </div>
+              <select
+                value={jurusan}
+                onChange={(e) => setJurusan(e.target.value)}
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+              >
+                <option value="">AKL & TJKT</option>
 
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-              <div className="flex items-center gap-1.5 text-rose-500 text-xs mb-1">
-                <HiExclamationTriangle size={14} />
-                Sisa
-              </div>
-              <div className="text-lg font-bold text-rose-500 dark:text-rose-400 truncate">
-                {rupiah(totalSisa)}
-              </div>
+                <option value="AKL">AKL</option>
+
+                <option value="TJKT">TJKT</option>
+              </select>
             </div>
+          </div>
+
+          {/* LOAD */}
+
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={handleReload}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              <HiOutlineCalendarDays className="h-4 w-4" />
+
+              {loading ? "Memuat..." : "Tampilkan Laporan"}
+            </button>
           </div>
         </div>
 
-        {/* TABLE */}
-        <div className="px-7 pt-6">
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-            <div
-              className="
-              max-h-[320px]
-              overflow-y-auto
+        {/* =================================================
+            SUMMARY
+        ================================================= */}
 
-              [&::-webkit-scrollbar]:w-1.5
-              [&::-webkit-scrollbar-track]:bg-transparent
-              [&::-webkit-scrollbar-thumb]:bg-zinc-300
-              dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700
-              [&::-webkit-scrollbar-thumb]:rounded-full
-              "
-            >
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-zinc-50/95 dark:bg-zinc-900/95 backdrop-blur z-20">
-                  <tr className="text-zinc-500 dark:text-zinc-400">
-                    <th className="px-5 py-3 text-left font-medium text-[11px] uppercase tracking-wider">
-                      NIS
-                    </th>
-                    <th className="text-left font-medium text-[11px] uppercase tracking-wider">
-                      Nama
-                    </th>
-                    <th className="text-left font-medium text-[11px] uppercase tracking-wider">
-                      Jurusan
-                    </th>
-                    <th className="text-left font-medium text-[11px] uppercase tracking-wider">
-                      Angkatan
-                    </th>
-                    <th className="text-right pr-5 font-medium text-[11px] uppercase tracking-wider">
-                      Tagihan
-                    </th>
-                    <th className="text-right pr-5 font-medium text-[11px] uppercase tracking-wider">
-                      Dibayar
-                    </th>
-                    <th className="text-right pr-5 font-medium text-[11px] uppercase tracking-wider">
-                      Potongan
-                    </th>
-                    <th className="text-right pr-5 font-medium text-[11px] uppercase tracking-wider">
-                      Sisa
-                    </th>
-                  </tr>
-                </thead>
+        <div className="grid shrink-0 grid-cols-1 gap-3 border-b border-zinc-200 p-4 sm:grid-cols-3 dark:border-zinc-800">
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="text-xs font-medium text-zinc-500">Periode</p>
 
-                <tbody>
-                  {data.slice(0, 10).map((item) => (
+            <p className="mt-1 font-semibold text-zinc-900 dark:text-white">
+              {periodLabel}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="text-xs font-medium text-zinc-500">Terbayarkan</p>
+
+            <p className="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">
+              {rupiah(totalMasuk)}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="text-xs font-medium text-zinc-500">Sisa</p>
+
+            <p className="mt-1 font-semibold text-red-600 dark:text-red-400">
+              {rupiah(totalSisa)}
+            </p>
+          </div>
+        </div>
+
+        {/* =================================================
+            TABLE
+        ================================================= */}
+
+        <div className="min-h-0 flex-1 overflow-auto">
+          <table className="min-w-[1400px] w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">
+              {/* GROUP HEADER */}
+
+              <tr className="border-b border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
+                <th
+                  rowSpan={2}
+                  className="border-r border-zinc-200 px-4 py-3 text-left font-semibold text-zinc-700 dark:border-zinc-800 dark:text-zinc-300"
+                >
+                  No
+                </th>
+
+                <th
+                  rowSpan={2}
+                  className="border-r border-zinc-200 px-4 py-3 text-left font-semibold text-zinc-700 dark:border-zinc-800 dark:text-zinc-300"
+                >
+                  Item Tagihan
+                </th>
+
+                <th
+                  colSpan={4}
+                  className="border-r border-zinc-200 px-4 py-3 text-center font-semibold text-purple-600 dark:border-zinc-800 dark:text-purple-400"
+                >
+                  AKL
+                </th>
+
+                <th
+                  colSpan={4}
+                  className="border-r border-zinc-200 px-4 py-3 text-center font-semibold text-blue-600 dark:border-zinc-800 dark:text-blue-400"
+                >
+                  TJKT
+                </th>
+
+                <th
+                  colSpan={3}
+                  className="px-4 py-3 text-center font-semibold text-zinc-700 dark:text-zinc-300"
+                >
+                  TOTAL KESELURUHAN
+                </th>
+              </tr>
+
+              {/* SUB HEADER */}
+
+              <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
+                {/* AKL */}
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-zinc-500">
+                  Nominal/Siswa
+                </th>
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-zinc-500">
+                  Total Tagihan
+                </th>
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  Terbayarkan
+                </th>
+
+                <th className="border-r border-zinc-200 px-3 py-2 text-right text-xs font-medium text-red-600 dark:border-zinc-800 dark:text-red-400">
+                  Sisa
+                </th>
+
+                {/* TJKT */}
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-zinc-500">
+                  Nominal/Siswa
+                </th>
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-zinc-500">
+                  Total Tagihan
+                </th>
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  Terbayarkan
+                </th>
+
+                <th className="border-r border-zinc-200 px-3 py-2 text-right text-xs font-medium text-red-600 dark:border-zinc-800 dark:text-red-400">
+                  Sisa
+                </th>
+
+                {/* TOTAL */}
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-zinc-500">
+                  Total Tagihan
+                </th>
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  Terbayarkan
+                </th>
+
+                <th className="px-3 py-2 text-right text-xs font-medium text-red-600 dark:text-red-400">
+                  Sisa
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={13}
+                    className="px-4 py-12 text-center text-zinc-500"
+                  >
+                    Menyiapkan laporan...
+                  </td>
+                </tr>
+              ) : data.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={13}
+                    className="px-4 py-12 text-center text-zinc-500"
+                  >
+                    Tidak ada data laporan untuk periode ini.
+                  </td>
+                </tr>
+              ) : (
+                data.map((item, index) => {
+                  const akl = item.AKL || {};
+
+                  const tjkt = item.TJKT || {};
+
+                  const itemTagihan =
+                    Number(akl.totalTagihan || 0) +
+                    Number(tjkt.totalTagihan || 0);
+
+                  const itemMasuk =
+                    Number(akl.terbayarkan || 0) +
+                    Number(tjkt.terbayarkan || 0);
+
+                  const itemSisa =
+                    Number(akl.sisa || 0) + Number(tjkt.sisa || 0);
+
+                  return (
                     <tr
-                      key={item.nis}
-                      className="
-                      border-t
-                      border-zinc-100
-                      dark:border-zinc-800
-                      hover:bg-zinc-50
-                      dark:hover:bg-zinc-900
-                      transition-colors
-                      "
+                      key={`${item.namaTagihan}-${index}`}
+                      className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50 dark:border-zinc-800/70 dark:hover:bg-zinc-900/60"
                     >
-                      <td className="px-5 py-3.5 font-medium text-zinc-500 dark:text-zinc-400">
-                        {item.nis}
+                      <td className="px-4 py-3 text-zinc-500">{index + 1}</td>
+
+                      <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white">
+                        {item.namaTagihan}
                       </td>
 
-                      <td className="font-medium text-zinc-900 dark:text-white">
-                        {item.nama}
+                      {/* AKL */}
+
+                      <td className="px-3 py-3 text-right text-zinc-600 dark:text-zinc-400">
+                        {rupiah(akl.nominalSiswa)}
                       </td>
 
-                      <td className="text-zinc-600 dark:text-zinc-300">
-                        {item.jurusan}
+                      <td className="px-3 py-3 text-right text-zinc-700 dark:text-zinc-300">
+                        {rupiah(akl.totalTagihan)}
                       </td>
 
-                      <td className="text-zinc-600 dark:text-zinc-300">
-                        {item.angkatan}
+                      <td className="px-3 py-3 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                        {rupiah(akl.terbayarkan)}
                       </td>
 
-                      <td className="text-right pr-5 text-zinc-600 dark:text-zinc-300">
-                        {rupiah(item.totalTagihan)}
+                      <td className="border-r border-zinc-100 px-3 py-3 text-right font-medium text-red-600 dark:border-zinc-800 dark:text-red-400">
+                        {rupiah(akl.sisa)}
                       </td>
 
-                      <td className="text-right pr-5 text-emerald-600 dark:text-emerald-400 font-semibold">
-                        {rupiah(item.totalDibayar)}
+                      {/* TJKT */}
+
+                      <td className="px-3 py-3 text-right text-zinc-600 dark:text-zinc-400">
+                        {rupiah(tjkt.nominalSiswa)}
                       </td>
-                      <td className="text-right pr-5 text-amber-600 dark:text-amber-400 font-semibold">
-                        {rupiah(item.totalPotongan)}
+
+                      <td className="px-3 py-3 text-right text-zinc-700 dark:text-zinc-300">
+                        {rupiah(tjkt.totalTagihan)}
                       </td>
-                      <td className="text-right pr-5 text-rose-500 dark:text-rose-400 font-semibold">
-                        {rupiah(item.totalSisa)}
+
+                      <td className="px-3 py-3 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                        {rupiah(tjkt.terbayarkan)}
+                      </td>
+
+                      <td className="border-r border-zinc-100 px-3 py-3 text-right font-medium text-red-600 dark:border-zinc-800 dark:text-red-400">
+                        {rupiah(tjkt.sisa)}
+                      </td>
+
+                      {/* TOTAL */}
+
+                      <td className="px-3 py-3 text-right font-semibold text-zinc-800 dark:text-zinc-200">
+                        {rupiah(itemTagihan)}
+                      </td>
+
+                      <td className="px-3 py-3 text-right font-semibold text-emerald-600 dark:text-emerald-400">
+                        {rupiah(itemMasuk)}
+                      </td>
+
+                      <td className="px-3 py-3 text-right font-semibold text-red-600 dark:text-red-400">
+                        {rupiah(itemSisa)}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  );
+                })
+              )}
+            </tbody>
 
-          {sisaRows > 0 && (
-            <p className="text-xs text-zinc-400 mt-2.5 px-1">
-              +{sisaRows} data lainnya akan tetap disertakan dalam file export.
-            </p>
-          )}
+            {/* =================================================
+                TOTAL
+            ================================================= */}
+
+            {data.length > 0 && (
+              <tfoot>
+                <tr className="border-t-2 border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900">
+                  <td
+                    colSpan={2}
+                    className="px-4 py-4 font-bold text-zinc-900 dark:text-white"
+                  >
+                    TOTAL
+                  </td>
+
+                  {/* AKL */}
+
+                  <td className="px-3 py-4 text-right font-bold text-zinc-500">
+                    -
+                  </td>
+
+                  <td className="px-3 py-4 text-right font-bold text-zinc-900 dark:text-white">
+                    {rupiah(total.aklTagihan)}
+                  </td>
+
+                  <td className="px-3 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                    {rupiah(total.aklMasuk)}
+                  </td>
+
+                  <td className="border-r border-zinc-200 px-3 py-4 text-right font-bold text-red-600 dark:border-zinc-800 dark:text-red-400">
+                    {rupiah(total.aklSisa)}
+                  </td>
+
+                  {/* TJKT */}
+
+                  <td className="px-3 py-4 text-right font-bold text-zinc-500">
+                    -
+                  </td>
+
+                  <td className="px-3 py-4 text-right font-bold text-zinc-900 dark:text-white">
+                    {rupiah(total.tjktTagihan)}
+                  </td>
+
+                  <td className="px-3 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                    {rupiah(total.tjktMasuk)}
+                  </td>
+
+                  <td className="border-r border-zinc-200 px-3 py-4 text-right font-bold text-red-600 dark:border-zinc-800 dark:text-red-400">
+                    {rupiah(total.tjktSisa)}
+                  </td>
+
+                  {/* TOTAL */}
+
+                  <td className="px-3 py-4 text-right font-bold text-zinc-900 dark:text-white">
+                    {rupiah(totalTagihan)}
+                  </td>
+
+                  <td className="px-3 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                    {rupiah(totalMasuk)}
+                  </td>
+
+                  <td className="px-3 py-4 text-right font-bold text-red-600 dark:text-red-400">
+                    {rupiah(totalSisa)}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
         </div>
 
-        {/* FOOTER */}
-        <div
-          className="
-    sticky
-    bottom-0
-    px-7
-    py-5
-    border-t
-    border-zinc-100
-    dark:border-zinc-800
-    bg-white
-    dark:bg-[#0b0c0f]
-    flex
-    flex-col
-    sm:flex-row
-    justify-between
-    items-center
-    gap-4
-    shrink-0
-  "
-        >
-          <div className="flex items-center gap-2.5 text-zinc-400 text-sm">
-            <HiDocumentChartBar size={18} />
-            <span>File akan diekspor dalam format Microsoft Excel (.xlsx)</span>
+        {/* =================================================
+            FOOTER
+        ================================================= */}
+
+        <div className="flex shrink-0 flex-col gap-3 border-t border-zinc-200 bg-white px-5 py-4 dark:border-zinc-800 dark:bg-zinc-950 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="font-medium text-zinc-700 dark:text-zinc-300">
+              {periodLabel}
+            </span>
+            <span className="mx-2">•</span>
+            {data.length.toLocaleString("id-ID")} item tagihan
           </div>
 
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={onClose}>
-              Batal
-            </Button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            >
+              Tutup
+            </button>
 
-            <Button onClick={() => onExport(data)}>Export Excel</Button>
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={loading || data.length === 0}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <HiDocumentArrowDown className="h-4 w-4" />
+              Export Excel
+            </button>
           </div>
         </div>
       </div>

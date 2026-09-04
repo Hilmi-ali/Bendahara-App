@@ -20,10 +20,10 @@ export default function StatCard({
         <Icon size={18} />
       </div>
       <div className="min-w-0">
-        <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 truncate">
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
           {title}
         </p>
-        <h2 className="mt-0.5 text-[21px] font-semibold text-zinc-900 dark:text-white tracking-tight tabular-nums truncate">
+        <h2 className=" text-[17px] font-semibold text-zinc-900 dark:text-white tracking-tight tabular-nums truncate">
           {isNumber ? (
             <CountUp end={Number(value)} duration={1.2} separator="." />
           ) : (

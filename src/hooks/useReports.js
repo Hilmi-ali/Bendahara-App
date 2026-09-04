@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+
 import {
   getReport,
   calculateSummary,
-  exportReportExcel,
+  getFinancialReport,
+  exportFinancialReportExcel,
 } from "../services/reportService";
 
 export default function useReports(filters = {}) {
@@ -33,8 +35,19 @@ export default function useReports(filters = {}) {
 
   const [loading, setLoading] = useState(true);
 
+  const [financialReport, setFinancialReport] = useState([]);
+
+  const [financialLoading, setFinancialLoading] = useState(false);
+
+  /*
+   * =========================================================
+   * LOAD LAPORAN SISWA
+   * =========================================================
+   */
+
   useEffect(() => {
     load();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(filters)]);
 
@@ -48,55 +61,6 @@ export default function useReports(filters = {}) {
 
       const baseSummary = calculateSummary(data);
 
-      const monthlyMap = {};
-
-      data.forEach((item) => {
-        let bulan = "-";
-
-        if (item.lastPaymentAt?.toDate) {
-          bulan = item.lastPaymentAt.toDate().toLocaleString("id-ID", {
-            month: "short",
-          });
-        }
-
-        if (!monthlyMap[bulan]) {
-          monthlyMap[bulan] = {
-            bulan,
-            total: 0,
-          };
-        }
-
-        monthlyMap[bulan].total += Number(item.totalDibayar || 0);
-      });
-
-      const jurusanMap = {};
-
-      data.forEach((item) => {
-        if (!jurusanMap[item.jurusan]) {
-          jurusanMap[item.jurusan] = {
-            jurusan: item.jurusan,
-            dibayar: 0,
-            sisa: 0,
-          };
-        }
-
-        jurusanMap[item.jurusan].dibayar += Number(item.totalDibayar || 0);
-
-        jurusanMap[item.jurusan].sisa += Number(item.totalSisa || 0);
-      });
-
-      /*
-      ======================================
-      Top Pembayar
-      ======================================
-      */
-
-      const topStudents = [...data]
-        .sort(
-          (a, b) => Number(b.totalDibayar || 0) - Number(a.totalDibayar || 0),
-        )
-        .slice(0, 10);
-
       const now = new Date();
 
       const currentMonth = now.getMonth();
@@ -108,20 +72,52 @@ export default function useReports(filters = {}) {
       let yearlyTotal = 0;
       let yearlyCount = 0;
 
-      data.forEach((item) => {
-        if (!item.lastPaymentAt?.toDate) return;
+      /*
+       * =====================================================
+       * SUMMARY BULANAN
+       * =====================================================
+       */
+
+      const monthlyTransactions = data.filter((item) => {
+        if (!item.lastPaymentAt?.toDate) {
+          return false;
+        }
 
         const d = item.lastPaymentAt.toDate();
 
-        if (d.getFullYear() === currentYear) {
-          yearlyTotal += Number(item.totalDibayar || 0);
-          yearlyCount++;
+        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+      });
+
+      /*
+       * =====================================================
+       * SUMMARY TAHUNAN
+       * =====================================================
+       */
+
+      const yearlyTransactions = data.filter((item) => {
+        if (!item.lastPaymentAt?.toDate) {
+          return false;
         }
 
-        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
-          monthlyTotal += Number(item.totalDibayar || 0);
-          monthlyCount++;
-        }
+        const d = item.lastPaymentAt.toDate();
+
+        return d.getFullYear() === currentYear;
+      });
+
+      monthlyTransactions.forEach((item) => {
+        monthlyTotal += Number(item.periodDibayar || item.totalDibayar || 0);
+
+        monthlyCount += Number(
+          item.periodTransactionCount || item.transactionCount || 1,
+        );
+      });
+
+      yearlyTransactions.forEach((item) => {
+        yearlyTotal += Number(item.periodDibayar || item.totalDibayar || 0);
+
+        yearlyCount += Number(
+          item.periodTransactionCount || item.transactionCount || 1,
+        );
       });
 
       setSummary({
@@ -137,31 +133,102 @@ export default function useReports(filters = {}) {
           count: yearlyCount,
         },
 
-        monthlyChart: Object.values(monthlyMap).sort((a, b) =>
-          a.bulan.localeCompare(b.bulan),
-        ),
+        /*
+         * Chart tidak lagi dipakai oleh Reports.jsx.
+         *
+         * Property tetap dipertahankan supaya tidak
+         * merusak komponen lain yang mungkin membacanya.
+         */
+        monthlyChart: [],
 
-        jurusanChart: Object.values(jurusanMap),
+        jurusanChart: baseSummary.jurusanChart || [],
 
-        outstandingJurusan: Object.values(jurusanMap),
+        outstandingJurusan: baseSummary.outstandingJurusan || [],
 
-        topStudents,
+        topStudents: baseSummary.topStudents || [],
       });
     } catch (err) {
-      console.error(err);
+      console.error("Gagal memuat laporan:", err);
     } finally {
       setLoading(false);
     }
   }
-  function exportExcel(rows) {
-    exportReportExcel(rows, filters);
+
+  /*
+   * =========================================================
+   * LOAD LAPORAN KEUANGAN
+   * =========================================================
+   */
+
+  async function loadFinancialReport({
+    period = "monthly",
+
+    month = new Date().getMonth() + 1,
+
+    year = new Date().getFullYear(),
+
+    jurusan = "",
+  } = {}) {
+    setFinancialLoading(true);
+
+    try {
+      const data = await getFinancialReport({
+        period,
+        month,
+        year,
+        jurusan,
+      });
+
+      setFinancialReport(data);
+
+      return data;
+    } catch (error) {
+      console.error("Gagal memuat laporan keuangan:", error);
+
+      throw error;
+    } finally {
+      setFinancialLoading(false);
+    }
+  }
+
+  /*
+   * =========================================================
+   * EXPORT EXCEL
+   * =========================================================
+   */
+
+  async function exportExcel({
+    period = "monthly",
+
+    month = new Date().getMonth() + 1,
+
+    year = new Date().getFullYear(),
+
+    jurusan = "",
+
+    data = [],
+  } = {}) {
+    return exportFinancialReportExcel({
+      data,
+      period,
+      month,
+      year,
+      jurusan,
+    });
   }
 
   return {
     reports,
     summary,
     loading,
+
+    financialReport,
+    financialLoading,
+
     refresh: load,
+
+    loadFinancialReport,
+
     exportExcel,
   };
 }

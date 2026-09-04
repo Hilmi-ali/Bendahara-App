@@ -79,3 +79,15 @@ select {
 .modern-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 120, 120, 0.6);
 }
+
+/* Hilangkan tombol panah pada input type number - Chrome / Edge / Safari */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}

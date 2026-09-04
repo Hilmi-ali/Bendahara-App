@@ -50,9 +50,6 @@ export default function PaymentTable({ students, onPay, onDetail }) {
                 Nama
               </th>
               <th className="px-4 py-3 text-left font-semibold uppercase tracking-wide text-[11px] text-gray-500 dark:text-zinc-400">
-                NIS
-              </th>
-              <th className="px-4 py-3 text-left font-semibold uppercase tracking-wide text-[11px] text-gray-500 dark:text-zinc-400">
                 Jurusan
               </th>
               <th className="px-4 py-3 text-right font-semibold uppercase tracking-wide text-[11px] text-gray-500 dark:text-zinc-400">
@@ -71,7 +68,7 @@ export default function PaymentTable({ students, onPay, onDetail }) {
                 Pembayaran
               </th>
               <th className="px-4 py-3 text-center font-semibold uppercase tracking-wide text-[11px] text-gray-500 dark:text-zinc-400">
-                Aksi
+                Bayar
               </th>
             </tr>
           </thead>
@@ -85,11 +82,6 @@ export default function PaymentTable({ students, onPay, onDetail }) {
                 <td className="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                   {siswa.nama}
                 </td>
-
-                <td className="px-4 py-3 text-gray-500 dark:text-zinc-400 whitespace-nowrap">
-                  {siswa.nis}
-                </td>
-
                 <td className="px-4 py-3 text-gray-500 dark:text-zinc-400 whitespace-nowrap">
                   {siswa.jurusan}
                 </td>
