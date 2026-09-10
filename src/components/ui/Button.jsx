@@ -10,27 +10,29 @@ export default function Button({
   disabled = false,
   type = "button",
   onClick,
+  className = "",
 }) {
   const variants = {
-    primary: "bg-primary text-white hover:bg-blue-700 shadow-soft",
+    primary:
+      "bg-primary text-white shadow-sm hover:bg-blue-700 hover:shadow-md",
 
     secondary:
       "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700",
 
-    success: "bg-green-600 text-white hover:bg-green-700",
+    success: "bg-green-600 text-white hover:bg-green-700 hover:shadow-md",
 
-    danger: "bg-red-600 text-white hover:bg-red-700",
+    danger: "bg-red-600 text-white hover:bg-red-700 hover:shadow-md",
 
     ghost:
-      "bg-transparent hover:bg-gray-100 dark:hover:bg-zinc-800 dark:text-white",
+      "bg-transparent text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-zinc-800",
 
     outline:
-      "border border-gray-300 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:text-white",
+      "border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-100 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-800",
   };
 
   const sizes = {
-    sm: "h-9 px-3 text-sm",
-    md: "h-11 px-5",
+    sm: "h-9 px-3 text-xs",
+    md: "h-11 px-5 text-sm",
     lg: "h-12 px-6 text-lg",
   };
 
@@ -40,27 +42,25 @@ export default function Button({
       disabled={loading || disabled}
       onClick={onClick}
       className={clsx(
-        "rounded-2xl",
-        "font-medium",
-        "transition-all",
-        "duration-200",
-        "flex",
-        "items-center",
-        "justify-center",
-        "gap-2",
-        "disabled:opacity-60",
-        "disabled:cursor-not-allowed",
-        "hover:scale-[1.02]",
-        variants[variant],
-        sizes[size],
+        "flex items-center justify-center gap-2 rounded-xl font-medium",
+        "transition-all duration-200",
+        "disabled:cursor-not-allowed disabled:opacity-60",
+        "focus:outline-none focus:ring-4 focus:ring-blue-500/10",
+        "hover:scale-[1.01]",
+        variants[variant] || variants.primary,
+        sizes[size] || sizes.md,
         fullWidth && "w-full",
+        className,
       )}
     >
       {loading ? (
-        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        <span
+          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+          aria-label="Loading"
+        />
       ) : (
         <>
-          {Icon && <Icon className="text-lg" />}
+          {Icon && <Icon className="text-base" />}
           {children}
         </>
       )}

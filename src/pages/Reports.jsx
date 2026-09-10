@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 
+import { useNavigate } from "react-router-dom";
 import {
   HiDocumentArrowDown,
-  HiMagnifyingGlass,
   HiOutlineBanknotes,
   HiOutlineCalendarDays,
   HiOutlineUsers,
@@ -17,38 +17,6 @@ import useReports from "../hooks/useReports";
 
 function rupiah(n) {
   return "Rp " + Number(n || 0).toLocaleString("id-ID");
-}
-
-const JURUSAN_STYLE = {
-  TJKT: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
-  AKL: "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
-};
-
-function JurusanBadge({ value }) {
-  if (!value) {
-    return <span className="text-zinc-400">-</span>;
-  }
-
-  const style =
-    JURUSAN_STYLE[value] ||
-    "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300";
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${style}`}
-    >
-      {value}
-    </span>
-  );
-}
-
-function initials(name = "") {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("");
 }
 
 function PeriodSummaryCard({ title, period, total, count, icon: Icon }) {
@@ -136,6 +104,8 @@ function JurusanSummaryCard({ title, total, icon: Icon, variant = "default" }) {
 }
 
 export default function Reports() {
+  const navigate = useNavigate();
+
   const {
     reports,
     summary,
@@ -148,10 +118,6 @@ export default function Reports() {
     exportExcel,
   } = useReports();
 
-  const [search, setSearch] = useState("");
-  const [jurusan, setJurusan] = useState("");
-  const [angkatan, setAngkatan] = useState("");
-
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const [exportPeriod, setExportPeriod] = useState("monthly");
@@ -162,30 +128,6 @@ export default function Reports() {
 
   const [exportJurusan, setExportJurusan] = useState("");
 
-  const filtered = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
-    return reports.filter((s) => {
-      const cocokNama =
-        !keyword ||
-        s.nama?.toLowerCase().includes(keyword) ||
-        String(s.nis || "").includes(keyword);
-
-      const cocokJurusan = jurusan ? s.jurusan === jurusan : true;
-
-      const cocokAngkatan = angkatan
-        ? Number(s.angkatan) === Number(angkatan)
-        : true;
-
-      return cocokNama && cocokJurusan && cocokAngkatan;
-    });
-  }, [reports, search, jurusan, angkatan]);
-
-  const angkatanList = useMemo(() => {
-    return [...new Set(reports.map((s) => s.angkatan))]
-      .filter(Boolean)
-      .sort((a, b) => Number(b) - Number(a));
-  }, [reports]);
   const jurusanSummary = useMemo(() => {
     let akl = 0;
     let tjkt = 0;
@@ -278,16 +220,25 @@ export default function Reports() {
             Rekap pembayaran dan laporan keuangan sekolah
           </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/laporan/cek-pembayaran")}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border-[#cfe0da] px-3.5 text-xs font-bold text-[#38615a] hover:border-[#9fc2b7] hover:bg-[#f5fbf8]"
+          >
+            <HiOutlineBanknotes className="h-4 w-4" />
+            Cek Pembayaran
+          </Button>
 
-        <Button
-          onClick={handleOpenExport}
-          disabled={financialLoading}
-          className="inline-flex items-center justify-center gap-2"
-        >
-          <HiDocumentArrowDown className="h-5 w-5" />
-
-          {financialLoading ? "Menyiapkan..." : "Export Laporan Keuangan"}
-        </Button>
+          <Button
+            onClick={handleOpenExport}
+            disabled={financialLoading}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#146c63] px-3.5 text-xs font-bold text-white shadow-[0_5px_12px_rgba(20,108,99,0.18)] hover:bg-[#0f5c54] sm:px-4"
+          >
+            <HiDocumentArrowDown className="h-4 w-4" />
+            {financialLoading ? "Menyiapkan..." : "Export Laporan"}
+          </Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <PeriodSummaryCard

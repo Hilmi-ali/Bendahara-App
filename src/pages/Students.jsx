@@ -89,11 +89,19 @@ export default function Students() {
         </div>
 
         <div className="flex flex-wrap gap-2.5">
-          <Button variant="secondary" onClick={downloadStudentTemplate}>
+          <Button
+            variant="secondary"
+            onClick={downloadStudentTemplate}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border-[#cfe0da] px-3.5 text-xs font-bold text-[#38615a] hover:border-[#9fc2b7] hover:bg-[#f5fbf8]"
+          >
             Download Template
           </Button>
 
-          <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+          <Button
+            variant="secondary"
+            onClick={() => setImportModalOpen(true)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border-[#cfe0da] px-3.5 text-xs font-bold text-[#38615a] hover:border-[#9fc2b7] hover:bg-[#f5fbf8]"
+          >
             Import Excel
           </Button>
 

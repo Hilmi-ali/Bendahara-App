@@ -9,6 +9,7 @@ import Payments from "../pages/Payments";
 import Reports from "../pages/Reports";
 import Settings from "../pages/Settings";
 import Login from "../pages/Login";
+import CekPembayaranItem from "../components/reports/CekPembayaranItem";
 
 import { isLoggedIn } from "../services/authService";
 
@@ -68,6 +69,14 @@ export default function AppRoutes() {
             element={
               <PrivateRoute>
                 <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/laporan/cek-pembayaran"
+            element={
+              <PrivateRoute>
+                <CekPembayaranItem />
               </PrivateRoute>
             }
           />

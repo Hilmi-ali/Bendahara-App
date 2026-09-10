@@ -13,10 +13,6 @@ import {
 
 import db from "../firebase/firestore";
 
-/*
-COLLECTION
-*/
-
 const transactionRef = collection(db, "transactions");
 const studentBillRef = collection(db, "studentBills");
 
