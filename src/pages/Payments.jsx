@@ -77,9 +77,11 @@ export default function Payments() {
 
         <div className=" sm:w-90 lg:w-64">
           <Input
+            size="sm"
             placeholder="Cari NIS / Nama..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="!h-9 !rounded-lg !bg-zinc-50 !pl-4 !pr-10 !text-xs !text-zinc-900 dark:!bg-zinc-950 dark:!text-zinc-50"
           />
         </div>
 
@@ -88,21 +90,9 @@ export default function Payments() {
         <select
           value={jurusan}
           onChange={(e) => setJurusan(e.target.value)}
-          className="
-      h-10
-      w-36
-      rounded-xl
-      border
+          className="!h-9 !rounded-lg !bg-zinc-50 !pl-3 !pr-10 !text-xs !text-zinc-900 dark:!bg-zinc-950 dark:!text-zinc-50 border
       border-zinc-200
-      dark:border-zinc-700
-      bg-white
-      dark:bg-darkcard
-      px-3
-      text-sm
-      dark:text-white
-      focus:ring-2
-      focus:ring-primary/20
-    "
+      dark:border-zinc-700"
         >
           <option value="">Semua Jurusan</option>
           <option value="TJKT">TJKT</option>
@@ -114,21 +104,9 @@ export default function Payments() {
         <select
           value={angkatan}
           onChange={(e) => setAngkatan(e.target.value)}
-          className="
-      h-10
-      w-36
-      rounded-xl
-      border
+          className="!h-9 !rounded-lg !bg-zinc-50 !pl-3 !pr-10 !text-xs !text-zinc-900 dark:!bg-zinc-950 dark:!text-zinc-50 border
       border-zinc-200
-      dark:border-zinc-700
-      bg-white
-      dark:bg-darkcard
-      px-3
-      text-sm
-      dark:text-white
-      focus:ring-2
-      focus:ring-primary/20
-    "
+      dark:border-zinc-700"
         >
           <option value="">Semua Angkatan</option>
 
@@ -149,7 +127,7 @@ export default function Payments() {
           variant="secondary"
           icon={HiClock}
           onClick={() => setHistoryOpen(true)}
-          className="h-10 px-4 text-sm"
+          className="!h-9 !rounded-xl !border-teal-200 !px-3 !text-xs !font-semibold !text-teal-700 hover:!border-teal-300 hover:!bg-teal-50 dark:!border-teal-900 dark:!text-teal-300 dark:hover:!bg-teal-950/40"
         >
           Riwayat
         </Button>

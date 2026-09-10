@@ -222,6 +222,7 @@ export default function Reports() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
+            size="sm"
             variant="secondary"
             onClick={() => navigate("/laporan/cek-pembayaran")}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border-[#cfe0da] px-3.5 text-xs font-bold text-[#38615a] hover:border-[#9fc2b7] hover:bg-[#f5fbf8]"
@@ -231,9 +232,12 @@ export default function Reports() {
           </Button>
 
           <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={handleOpenExport}
             disabled={financialLoading}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#146c63] px-3.5 text-xs font-bold text-white shadow-[0_5px_12px_rgba(20,108,99,0.18)] hover:bg-[#0f5c54] sm:px-4"
+            className="!h-9 !rounded-xl !border-teal-200 !px-3 !text-xs !font-semibold !text-teal-700 hover:!border-teal-300 hover:!bg-teal-50 dark:!border-teal-900 dark:!text-teal-300 dark:hover:!bg-teal-950/40"
           >
             <HiDocumentArrowDown className="h-4 w-4" />
             {financialLoading ? "Menyiapkan..." : "Export Laporan"}

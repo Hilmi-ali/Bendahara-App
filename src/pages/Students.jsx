@@ -90,6 +90,7 @@ export default function Students() {
 
         <div className="flex flex-wrap gap-2.5">
           <Button
+            size="sm"
             variant="secondary"
             onClick={downloadStudentTemplate}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border-[#cfe0da] px-3.5 text-xs font-bold text-[#38615a] hover:border-[#9fc2b7] hover:bg-[#f5fbf8]"
@@ -98,6 +99,7 @@ export default function Students() {
           </Button>
 
           <Button
+            size="sm"
             variant="secondary"
             onClick={() => setImportModalOpen(true)}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border-[#cfe0da] px-3.5 text-xs font-bold text-[#38615a] hover:border-[#9fc2b7] hover:bg-[#f5fbf8]"
@@ -106,11 +108,13 @@ export default function Students() {
           </Button>
 
           <Button
+            size="sm"
             icon={HiPlus}
             onClick={() => {
               setEditing(null);
               setModalOpen(true);
             }}
+            className="inline-flex h-8 items-center justify-center gap-2 bg-blue-50 px-3.5 text-xs font-bold text-blue-700 transition-all duration-300 hover:border-blue-200 hover:bg-blue-100 hover:text-blue-800"
           >
             Tambah Siswa
           </Button>
@@ -118,18 +122,20 @@ export default function Students() {
       </div>
 
       {/* Filter */}
-      <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-darkcard p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-darkcard p-3">
+        <div className="lg:w-74 grid grid-cols-1 lg:grid-cols-3 gap-3">
           <Input
+            size="sm"
             placeholder="Cari NIS atau nama siswa..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="!h-9 !rounded-lg !bg-zinc-50 !pl-4 !pr-3 !text-xs dark:!bg-zinc-950"
           />
 
           <select
             value={jurusan}
             onChange={(e) => setJurusan(e.target.value)}
-            className="h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-sm text-gray-700 dark:text-zinc-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
+            className="!h-9 !rounded-lg !bg-zinc-50 !pl-4 !pr-10 !text-xs !text-zinc-900 dark:!bg-zinc-950 dark:!text-zinc-50"
           >
             <option value="">Semua Jurusan</option>
             <option value="TJKT">TJKT</option>
@@ -139,7 +145,7 @@ export default function Students() {
           <select
             value={angkatan}
             onChange={(e) => setAngkatan(e.target.value)}
-            className="h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-sm text-gray-700 dark:text-zinc-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
+            className="!h-9 !rounded-lg !bg-zinc-50 !pl-4 !pr-3 !text-xs !text-zinc-900 dark:!bg-zinc-950 dark:!text-zinc-50"
           >
             <option value="">Semua Angkatan</option>
             {angkatanOptions.map((a) => (
